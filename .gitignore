@@ -1,2 +1,5 @@
-*.sublime-project
-*.sublime-workspace
+.Rproj.user
+.Rhistory
+.RData
+inst/doc
+docs
