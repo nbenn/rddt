@@ -10,7 +10,8 @@ Description: What the package does (one paragraph).
 Imports:
   R6,
   Rmpi,
-  data.table
+  data.table,
+  parallel
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
