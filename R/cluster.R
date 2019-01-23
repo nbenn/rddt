@@ -10,10 +10,9 @@ local({
 cluster <- R6::R6Class(
   "cluster",
   public = list(
-    nodes = NULL,
     initialize = function(...) {
       if (is.null(get_active_cluster())) {
-        self$nodes <- private$start_cluster(...)
+        private$nodes <- private$start_cluster(...)
         set_active_cluster(self)
       } else {
         stop("only a single active cluster is allowed.")
@@ -21,14 +20,61 @@ cluster <- R6::R6Class(
       invisible(NULL)
     },
     finalize = function() {
-      private$stop_cluster(self$nodes)
+      private$stop_cluster(private$nodes)
       set_active_cluster(NULL)
       invisible(NULL)
+    },
+    broadcast = function(data, dest = seq.int(2L, self$n_nodes),
+                         source = 1L, ...) {
+      stopifnot(
+        is.integer(source), is.integer(dest),
+        length(source) == 1L, length(dest) > 1L,
+        all(c(source, dest) >= 1L), all(c(source, dest) <= self$n_nodes),
+        length(intersect(source, dest)) == 0L
+      )
+      private$bcast_cluster(data, private$nodes[dest], private$nodes[[source]],
+                            ...)
+    },
+    scatter = function(data, dest = seq.int(2L, self$n_nodes),
+                       source = 1L, ...) {
+      stopifnot(
+        is.integer(source), is.integer(dest),
+        length(source) == 1L, length(dest) > 1L,
+        all(c(source, dest) >= 1L), all(c(source, dest) <= self$n_nodes),
+        length(intersect(source, dest)) == 0L
+      )
+      private$scatter_cluster(data, private$nodes[dest],
+                              private$nodes[[source]], ...)
+    },
+    send = function(data, dest, source = 1L, ...) {
+      stopifnot(
+        is.integer(source), is.integer(dest),
+        length(source) == 1L, length(dest) == 1L,
+        source <= self$n_nodes, dest <= self$n_nodes,
+        source >= 1L, dest >= 1L, source != dest
+      )
+      private$send_cluster(data, private$nodes[[dest]], private$nodes[[source]],
+                           ...)
     }
   ),
+  active = list(
+    n_nodes = function() length(private$nodes),
+    n_workers = function() self$n_nodes - 1L
+  ),
   private = list(
-    start_cluster = function(...) NULL,
-    stop_cluster = function(nodes) NULL
+    nodes = list(),
+    start_cluster = function(...)
+      message("need a \"start_cluster\" method."),
+    stop_cluster = function(nodes)
+      message("need a \"stop_cluster\" method."),
+    bcast_cluster = function(dat, dst, src, ...) {
+      lapply(dst, function(x) private$send_cluster(dat, x, src, ...))
+    },
+    scatter_cluster = function(dat, dst, src, ...) {
+      Map(function(x, y) private$send_cluster(x, y, src, ...), dat, dst)
+    },
+    send_cluster = function(dat, dst, src, ...)
+      message("need a \"send_cluster\" method.")
   )
 )
 

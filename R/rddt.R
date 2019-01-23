@@ -7,19 +7,18 @@ rddt <- function(..., cluster = get_cl()) {
     collapse = ""
   )
 
-  dat <- split(
-    data.table::data.table(...),
-    group_indices(nrow(dat), cluster$n_workers)
-  )
+  dat <- data.table::data.table(...)
+  dat <- split(dat, group_indices(nrow(dat), cluster$n_workers))
 
-  cluster$scatter(dat)
+  cluster$scatter(dat, name = id)
 
   structure(
     list(
       heads = lapply(dat, head),
       tails = lapply(dat, tail),
       nrows = lapply(dat, nrow),
-      cluster = cluster
+      cluster = cluster,
+      id = id
     ),
     class = "rddt"
   )
