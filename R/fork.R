@@ -14,9 +14,16 @@ fork_cluster <- R6::R6Class(
     stop_cluster = function(nodes) {
       parallel::stopCluster(nodes[-1L])
     },
-    send_cluster = function(dat, dst, src, ...) {
+    send_cluster = function(dat, dst, src, nme, ...) {
       stopifnot(src$rank == 0L)
-      send_to_node(dat, dst, ...)
+      res <- send_to_node(dat, dst, nme)
+      stopifnot(res$success, res$type == "VALUE", is.null(res$value))
+    },
+    receive_cluster = function(nme, src, dst, ...) {
+      stopifnot(dst$rank == 0L)
+      res <- retrieve_from_node(src, nme)
+      stopifnot(res$success, res$type == "VALUE")
+      res$value
     }
   )
 )

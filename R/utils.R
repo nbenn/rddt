@@ -24,3 +24,7 @@ group_indices <- function(len, grp, split = FALSE) {
     as.integer(bins)
   }
 }
+
+rand_name <- function(alphabet = c(LETTERS, letters), length = 10L) {
+  paste(sample(alphabet, length, replace = TRUE), collapse = "")
+}
