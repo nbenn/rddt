@@ -21,14 +21,14 @@ cluster <- R6::R6Class(
       invisible(NULL)
     },
     finalize = function() {
-      private$stop_cluster()
+      private$stop_cluster(self$nodes)
       set_active_cluster(NULL)
       invisible(NULL)
     }
   ),
   private = list(
     start_cluster = function(...) NULL,
-    stop_cluster = function() NULL
+    stop_cluster = function(nodes) NULL
   )
 )
 
