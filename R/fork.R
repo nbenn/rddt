@@ -24,7 +24,9 @@ fork_cluster <- R6::R6Class(
       res <- retrieve_from_node(src, nme)
       stopifnot(res$success, res$type == "VALUE")
       res$value
-    }
+    },
+    call_node = function(fun, dst, ...)
+      node_call(dst, fun, ...)
   )
 )
 

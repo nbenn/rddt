@@ -83,6 +83,17 @@ cluster <- R6::R6Class(
       )
       private$receive_cluster(name, private$nodes[[source]],
                               private$nodes[[dest]], ...)
+    },
+    call = function(func, dest = seq.int(2L, self$n_nodes), ...) {
+      dest <- unique(dest)
+      stopifnot(
+        is.integer(dest), length(dest) >= 1L, dest <= self$n_nodes, dest >= 1L
+      )
+      if (length(dest) == 1L) {
+        private$call_node(func, private$nodes[[dest]], ...)
+      } else {
+        private$call_cluster(func, private$nodes[dest], ...)
+      }
     }
   ),
   active = list(
@@ -107,7 +118,12 @@ cluster <- R6::R6Class(
       lapply(src, function(x) private$receive_cluster(nme, x, dst, ...))
     },
     receive_cluster = function(nme, src, dst, ...)
-      message("need a \"receive_cluster\" method.")
+      message("need a \"receive_cluster\" method."),
+    call_cluster = function(fun, dst, ...) {
+      lapply(dst, function(x) private$call_node(fun, x, ...))
+    },
+    call_node = function(fun, dst, ...)
+      message("need a \"call_node\" method.")
   )
 )
 
