@@ -94,6 +94,17 @@ cluster <- R6::R6Class(
       } else {
         private$call_cluster(func, private$nodes[dest], ...)
       }
+    },
+    eval = function(expr, dest = seq.int(2L, self$n_nodes), ...) {
+      dest <- unique(dest)
+      stopifnot(
+        is.integer(dest), length(dest) >= 1L, dest <= self$n_nodes, dest >= 1L
+      )
+      if (length(dest) == 1L) {
+        private$eval_node(expr, private$nodes[[dest]], ...)
+      } else {
+        private$eval_cluster(expr, private$nodes[dest], ...)
+      }
     }
   ),
   active = list(
@@ -123,7 +134,12 @@ cluster <- R6::R6Class(
       lapply(dst, function(x) private$call_node(fun, x, ...))
     },
     call_node = function(fun, dst, ...)
-      message("need a \"call_node\" method.")
+      message("need a \"call_node\" method."),
+    eval_cluster = function(exp, dst, ...) {
+      lapply(dst, function(x) private$eval_node(exp, x, ...))
+    },
+    eval_node = function(exp, dst, ...)
+      message("need a \"eval_node\" method.")
   )
 )
 

@@ -21,13 +21,19 @@ fork_cluster <- R6::R6Class(
     },
     receive_cluster = function(nme, src, dst, ...) {
       stopifnot(dst$rank == 0L)
-      res <- retrieve_from_node(src, nme)
+      res <- node_call(src, get, nme)
       stopifnot(res$success, res$type == "VALUE")
       res$value
     },
     call_node = function(fun, dst, ...) {
       stopifnot(dst$rank != 0L)
       res <- node_call(dst, fun, ...)
+      stopifnot(res$success, res$type == "VALUE")
+      res$value
+    },
+    eval_node = function(exp, dst, ...) {
+      stopifnot(dst$rank != 0L)
+      res <- node_call(dst, evalq, exp)
       stopifnot(res$success, res$type == "VALUE")
       res$value
     }
