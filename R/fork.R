@@ -33,7 +33,7 @@ fork_cluster <- R6::R6Class(
     },
     eval_node = function(exp, dst, ...) {
       stopifnot(dst$rank != 0L)
-      res <- node_call(dst, evalq, exp)
+      res <- node_call(dst, eval, exp)
       stopifnot(res$success, res$type == "VALUE")
       res$value
     }
@@ -42,7 +42,7 @@ fork_cluster <- R6::R6Class(
 
 node_call <- local({
   in_global <- function(f, a) {
-    do.call(what = f, args = a, quote = TRUE, envir = .GlobalEnv)
+    do.call(what = f, args = a, quote = FALSE, envir = .GlobalEnv)
   }
   function(node, fun, ...) {
     serialize(
@@ -63,7 +63,3 @@ send_to_node <- local({
   }
   function(dat, node, name) node_call(node, assign_gobal, name, dat)
 })
-
-retrieve_from_node <- function(node, name) {
-  node_call(node, get, name, envir = .GlobalEnv)
-}

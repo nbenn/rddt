@@ -26,14 +26,28 @@ new_rddt <- function(data, cluster = get_cl()) {
   structure(res, class = "rddt")
 }
 
+#' @export
 rddt <- function(..., cluster = get_cl()) {
   new_rddt(data.table::data.table(...), cluster)
+}
+
+#' @export
+as_rddt <- function(data, cluster = get_cl()) {
+  new_rddt(data.table::as.data.table(data), cluster)
 }
 
 #' @export
 collect <- function(data) {
   stopifnot(inherits(data, "rddt"))
   data.table::rbindlist(
-    tmp <- data$cluster$gather(data$id)
+    data$cluster$gather(data$id)
   )
+}
+
+#' @export
+`[.rddt` <- function(x, ...) {
+  dots <- match.call(expand.dots = FALSE)$`...`
+  dt_call <- as.call(c(list(as.symbol("["), x = as.name(x$id)), dots))
+  expr <- substitute(expression({dt_call; NULL}))
+  x$cluster$eval(expr)
 }

@@ -13,6 +13,9 @@ cluster <- R6::R6Class(
     initialize = function(...) {
       if (is.null(get_active_cluster())) {
         private$nodes <- private$start_cluster(...)
+        stopifnot(all(unlist(
+          self$call(requireNamespace, package = "data.table", quietly = TRUE)
+        )))
         set_active_cluster(self)
       } else {
         stop("only a single active cluster is allowed.")
@@ -100,6 +103,7 @@ cluster <- R6::R6Class(
       stopifnot(
         is.integer(dest), length(dest) >= 1L, dest <= self$n_nodes, dest >= 1L
       )
+      if (!is.call(expr) && !is.expression(expr)) expr <- substitute(expr)
       if (length(dest) == 1L) {
         private$eval_node(expr, private$nodes[[dest]], ...)
       } else {
