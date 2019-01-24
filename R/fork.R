@@ -25,8 +25,12 @@ fork_cluster <- R6::R6Class(
       stopifnot(res$success, res$type == "VALUE")
       res$value
     },
-    call_node = function(fun, dst, ...)
-      node_call(dst, fun, ...)
+    call_node = function(fun, dst, ...) {
+      stopifnot(dst$rank != 0L)
+      res <- node_call(dst, fun, ...)
+      stopifnot(res$success, res$type == "VALUE")
+      res$value
+    }
   )
 )
 
