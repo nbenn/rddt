@@ -1,24 +1,33 @@
 
-#' @export
-rddt <- function(..., cluster = get_cl()) {
+#' TODO: make an R6 class for reference sematincs, also helps with finalization
+#' which can be triggered on gc
+new_rddt <- function(data, cluster = get_cl()) {
 
-  id <- rand_name()
+  stopifnot(data.table::is.data.table(data), inherits(cluster, "cluster"))
 
-  dat <- data.table::data.table(...)
-  dat <- split(dat, group_indices(nrow(dat), cluster$n_workers))
+  data <- split(data, group_indices(nrow(data), cluster$n_workers))
 
-  cluster$scatter(dat, name = id)
-
-  structure(
+  res <- list2env(
     list(
-      heads = lapply(dat, head),
-      tails = lapply(dat, tail),
-      nrows = lapply(dat, nrow),
+      heads = lapply(data, head),
+      tails = lapply(data, tail),
+      nrows = vapply(data, nrow, integer(1L)),
       cluster = cluster,
-      id = id
-    ),
-    class = "rddt"
+      id = rand_name()
+    )
   )
+
+  reg.finalizer(res, function(x) {
+    x$cluster$call(rm, list = x$id, envir = .GlobalEnv)
+  })
+
+  cluster$scatter(data, name = res$id)
+
+  structure(res, class = "rddt")
+}
+
+rddt <- function(..., cluster = get_cl()) {
+  new_rddt(data.table::data.table(...), cluster)
 }
 
 #' @export
