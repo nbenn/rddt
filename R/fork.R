@@ -34,15 +34,21 @@ fork_cluster <- R6::R6Class(
   )
 )
 
-node_call <- function(node, fun, ...) {
-  serialize(
-    list(
-      type = "EXEC",
-      data = list(fun = fun, args = list(...), return = TRUE, tag = NULL)
-    ), node$con, xdr = FALSE
-  )
-  unserialize(node$con)
-}
+node_call <- local({
+  in_global <- function(f, a) {
+    do.call(what = f, args = a, quote = TRUE, envir = .GlobalEnv)
+  }
+  function(node, fun, ...) {
+    serialize(
+      list(
+        type = "EXEC",
+        data = list(fun = in_global, args = list(f = fun, a = list(...)),
+                    return = TRUE, tag = NULL)
+      ), node$con, xdr = FALSE
+    )
+    unserialize(node$con)
+  }
+})
 
 send_to_node <- local({
   assign_gobal <- function(n, v) {
