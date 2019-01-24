@@ -3,19 +3,29 @@
 #' which can be triggered on gc
 new_rddt <- function(data, cluster = get_cl()) {
 
-  stopifnot(data.table::is.data.table(data), inherits(cluster, "cluster"))
+  stopifnot(inherits(cluster, "cluster"))
 
-  data <- split(data, group_indices(nrow(data), cluster$n_workers))
-
-  res <- list2env(
-    list(
+  if (is.character(data)) {
+    stopifnot(length(data) == 1L)
+    info <- list(
+      heads = cluster$eval(call("head", as.symbol(data))),
+      tails = cluster$eval(call("tail", as.symbol(data))),
+      nrows = as.integer(cluster$eval(call("nrow", as.symbol(data)))),
+      cluster = cluster,
+      id = data
+    )
+  } else if (data.table::is.data.table(data)) {
+    data <- split(data, group_indices(nrow(data), cluster$n_workers))
+    info <- list(
       heads = lapply(data, head),
       tails = lapply(data, tail),
       nrows = vapply(data, nrow, integer(1L)),
       cluster = cluster,
       id = rand_name()
     )
-  )
+  }
+
+  res <- list2env(info)
 
   reg.finalizer(res, function(x) {
     x$cluster$call(rm, list = x$id, envir = .GlobalEnv)
@@ -45,9 +55,24 @@ collect <- function(data) {
 }
 
 #' @export
-`[.rddt` <- function(x, ...) {
+`[.rddt` <- function(x, ..., in_place = TRUE) {
+
   dots <- match.call(expand.dots = FALSE)$`...`
   dt_call <- as.call(c(list(as.symbol("["), x = as.name(x$id)), dots))
-  expr <- substitute(expression({dt_call; NULL}))
-  x$cluster$eval(expr)
+
+  if (in_place) {
+    expr <- substitute(expression({dt_call; TRUE}))
+  } else {
+    new_id <- rand_name()
+    expr <- substitute(expression({assign(new_id, dt_call); TRUE}))
+  }
+
+  res <- x$cluster$eval(expr)
+  stopifnot(all(unlist(res)))
+
+  if (in_place) {
+    invisible(x)
+  } else {
+    new_rddt(new_id)
+  }
 }
