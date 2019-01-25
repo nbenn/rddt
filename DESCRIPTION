@@ -8,10 +8,12 @@ Authors@R:
            email = "first.last@example.com")
 Description: What the package does (one paragraph).
 Imports:
-  R6,
-  Rmpi,
-  data.table,
-  parallel
+    R6,
+    Rmpi,
+    data.table,
+    parallel,
+    pillar,
+    fansi
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
