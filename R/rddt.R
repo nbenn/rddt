@@ -1,5 +1,8 @@
 
-new_rddt <- function(data, cluster = get_cl()) {
+# Make sure data.table knows we know we're using it
+.datatable.aware = TRUE
+
+new_rddt <- function(data, partition_by = NULL, cluster = get_cl()) {
 
   stopifnot(inherits(cluster, "cluster"))
 
@@ -9,15 +12,21 @@ new_rddt <- function(data, cluster = get_cl()) {
       heads = cluster$eval(call("head", as.symbol(data), n = 10L)),
       nrows = as.integer(cluster$eval(call("nrow", as.symbol(data)))),
       cluster = cluster,
-      id = data
+      id = data,
+      partition = partition_by
     )
   } else if (data.table::is.data.table(data)) {
-    data <- split(data, group_indices(nrow(data), cluster$n_workers))
+    if (is.null(partition_by)) {
+      data <- split(data, group_indices(nrow(data), cluster$n_workers))
+    } else {
+      data <- grouped_split_by(data, partition_by, cluster$n_workers)
+    }
     info <- list(
       heads = lapply(data, head, n = 10L),
       nrows = vapply(data, nrow, integer(1L)),
       cluster = cluster,
-      id = rand_name()
+      id = rand_name(),
+      partition = partition_by
     )
   }
 
@@ -33,13 +42,13 @@ new_rddt <- function(data, cluster = get_cl()) {
 }
 
 #' @export
-rddt <- function(..., cluster = get_cl()) {
-  new_rddt(data.table::data.table(...), cluster)
+rddt <- function(..., partition_by = NULL, cluster = get_cl()) {
+  new_rddt(data.table::data.table(...), partition_by, cluster)
 }
 
 #' @export
-as_rddt <- function(data, cluster = get_cl()) {
-  new_rddt(data.table::as.data.table(data), cluster)
+as_rddt <- function(data, partition_by = NULL, cluster = get_cl()) {
+  new_rddt(data.table::as.data.table(data), partition_by, cluster)
 }
 
 #' @export
