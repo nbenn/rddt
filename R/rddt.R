@@ -28,6 +28,9 @@ new_rddt <- function(data, partition_by = NULL, cluster = get_cl()) {
       id = rand_name(),
       partition = partition_by
     )
+    cluster$scatter(data, name = info$id)
+  } else {
+    stop("data can either be character or data.table")
   }
 
   res <- list2env(info)
@@ -36,9 +39,34 @@ new_rddt <- function(data, partition_by = NULL, cluster = get_cl()) {
     x$cluster$call(rm, list = x$id, envir = .GlobalEnv)
   })
 
-  cluster$scatter(data, name = res$id)
-
   structure(res, class = "rddt")
+}
+
+#' @export
+read_rddt <- function(files, read_fun, partition = NULL,
+                      cluster = get_cl(), ...) {
+
+  stopifnot(
+    length(files) >= cluster$n_workers, all(file.exists(files)),
+    is.function(read_fun)
+  )
+
+  id <- rand_name()
+  dots <- match.call(expand.dots = FALSE)$`...`
+  files <- split(files, group_indices(length(files), cluster$n_workers))
+
+  exprs <- lapply(files, function(x) {
+    call <- as.call(c(read_files, list(x), read_fun, dots))
+    substitute(
+      expression({assign(id, call); TRUE}),
+      list(id = id, call = call)
+    )
+  })
+
+  res <- Map(cluster$eval, exprs, seq_len(cluster$n_workers) + 1L)
+  stopifnot(all(unlist(res)))
+
+  new_rddt(id, partition = partition, cluster = cluster)
 }
 
 #' @export

@@ -70,3 +70,11 @@ grouped_split_by <- function(data, by, n_bins) {
     split(data, by = tmp_col), function(x) x[, (tmp_col) := NULL]
   )
 }
+
+read_files <- function(files, read_fun, ...) {
+  dat <- lapply(files, read_fun, ...)
+  if (any(vapply(dat, Negate(data.table::is.data.table), logical(1L)))) {
+    dat <- lapply(dat, data.table::as.data.table)
+  }
+  data.table::rbindlist(dat)
+}
