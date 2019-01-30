@@ -1,0 +1,68 @@
+---
+output:
+  github_document:
+    html_preview: false
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+# [rddt](https://github.com/nbenn/rddt)
+
+The R package `rddt` is an attempt at providing a native distributed `data.frame` to R, inspired by distributed `Dataframe`s in Spark. An R package with similar intent and scope is [`big.data.table`](https://github.com/jangorecki/big.data.table). The main difference between the two R packages is how closely the data structure is coupled to the technology providing parallelism. While `big.data.table` builds on [`Rserve`](https://www.rdocumentation.org/packages/Rserve), `rddt` provides a layer of abstraction with backend implementations for [`parallel`](https://www.rdocumentation.org/packages/parallel) fork clusters and [`snow`](https://www.rdocumentation.org/packages/snow)` MPI clusters.
+
+## Installation
+
+You can install the development version of [rddt](https://nbenn.github.io/rddt) from GitHub by running
+
+``` r
+source("https://install-github.me/nbenn/rddt")
+```
+
+Alternatively, if you have the `remotes` package available and are interested in the latest release, you can install from GitHub using `install_github()` as
+
+``` r
+# install.packages("remotes")
+remotes::install_github("nbenn/rddt@*release")
+```
+
+## Example
+
+Distributed `data.frame`s can be instantiated as `rddt` objects either by calling `rddt()`, `as_rddt()` or `read_rddt()`. If all data is available on the master process, it can be distributed as follows
+
+```{r distribute}
+library(rddt)
+set_cl(fork_cluster, n_nodes = 2L)
+
+# if the individual columns are available as vectors
+dat <- rddt(
+  a = rnorm(n = 1e5),
+  b = sample(letters, size = 1e5, TRUE)
+)
+
+# if a complete data.frame type structure is available
+dat <- as_rddt(nycflights13::flights, partition_by = c("origin", "dest"))
+print(dat, n = 5)
+```
+
+In most practical settings it will probably make most sense to have each process read its share of the data from file in parallel instead of reading all data on the master process and subsequently distributing the data.
+
+```{r read}
+# set up files to be read
+tmp <- split(data.table::as.data.table(nycflights13::flights), by = "month")
+files <- file.path(tempdir(), paste0("nyc_fllights_", names(tmp), ".csv"))
+invisible(Map(write.csv, tmp, files))
+
+dat <- read_rddt(files, read.csv, partition = "month")
+print(dat, n = 5)
+
+# cleanup
+unlink(files)
+```
